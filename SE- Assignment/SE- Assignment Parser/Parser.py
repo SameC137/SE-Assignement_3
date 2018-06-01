@@ -1,13 +1,13 @@
 from collection import defaultdict
 class node:
-    def __init__(self, name,typeOfNode,indentLevel,insideLoop):
+    def __init__(self,name,indentLevel,insideLoop):
         self.name = name
         self.next = None
         self.insideLoop=None
         self.indentLevel=indentLevel
     def __repr__(self):
         return self.name
-class nodeWithBranchs:
+class modifier:
     def __init__(self,name,indentLevel)
         self.name = name
         self.true = None
@@ -16,94 +16,51 @@ class nodeWithBranchs:
 class Parser:
     def __init__(self,filename):
         self.fileName=filename
-        self.graph=defaultdict(list)
+        self.conditions=defaultdict(list)
+        self.indentList=defaultdict(list)        
         self.file=open(filename,"r")
         self.controlFlowModifiers=["while","for","if","elif","else:"]
     def parse(self):
         for line in self.file.readline():
             indentLevel=self.getIndentLevel(line)
             line=line.strip()
-            ifline.stattswith('def'):
-                self.graph[indentLevel].append(node("function Definition "+line))
+            if line.startswith('def'):
+                self.graph[indentLevel].append(node(line,"functon def",indentLevel,false))
             elif line:
                 firstWord=line.split()[0]
                 if firstWord in self.controlFlowModifiers:
                     if(firstWord =='if'):
-                        condition=nodeWithBranches(line,indentLevel)
-                        if_condition = Serial("if true")
-                        condition.true = if_condition
-                            
-                            if self.graph[indentLevel]:  # if there's some other statement before me, i'm his next
-                                self.graph[indentLevel][-1].next = condition
-                            else:
-                                parent = self.graph[indentLevel - 4][-1]  # one indent up, the last node is the parent
-                                
-                                if type(parent) is nodeWithBranches:  # if this is a nested if
-                                    if not parent.true:  # if true branch is not taken, take it
-                                        parent.true = condition
-                                    else:
-                                        parent.false = condition
-                                else:
-                                    parent.next = condition
-
-                            self.graph[indentLevel].append(condition)
-                            self.graph[indentLevel].append(if_condition)
-                        elif firstWord == 'elif':
-                            last_condition = self.getLastCondition(self.graph[indentLevel])
-                            else_condition = Serial("if false")
-                            new_condition = Condition('cond ' + trimmed[4:])
-                            if_condition = Serial("if true")
-
-                            last_condition.false = else_condition
-                            else_condition.next = new_condition
-                            new_condition.true = if_condition
-
-                            self.graph[indentLevel].append(else_condition)
-                            self.graph[indentLevel].append(new_condition)
-                            self.graph[indentLevel].append(if_condition)
-
-                        elif firstWord == 'else:':
-                            last_condition = self.getLastCondition(self.graph[indentLevel])
-                            else_condition = Serial("if false")
-                            last_condition.false = else_condition
-                            self.graph[indent_level].append(else_condition)
-                        elif firstWord=='while':
-                            condition=nodeWithBranches(line,indentLevel)
-                            loopCondition = Serial("loop condition true")
-                            condition.true = loopCondition
-                            
-                            if self.graph[indentLevel]:  # if there's some other statement before me, i'm his next
-                                self.graph[indentLevel][-1].next = condition
-                            else:
-                                parent = self.graph[indentLevel - 4][-1]  # one indent up, the last node is the parent
-                                
-                                if type(parent) is Condition:  # if this is a nested if
-                                    if not parent.true:  # if true branch is not taken, take it
-                                        parent.true = condition
-                                    else:
-                                        parent.false = condition
-                                else:
-                                    parent.next = condition
-
-                            self.graph[indentLevel].append(condition)
-                            self.graph[indentLevel].append(if_condition)
-
-                    else:  # here, they are just statements
-                        statement = node(line)
-                        
-                        if not self.graph[indentLevel]:  # if i'm the first in my indent level
-                            parent = self.graph[indentLevel - 1][-1]
-                            parent.next = statement
+                        ifCondition=modifier(line[2:],indentLevel)
+                        if self.indentList[indentLevel]:
+                            self.indentList[indentLevel].next=ifCondition
                         else:
-                            predecessor = self.graph[indent_level][-1]
-                            predecessor.next = statement
-
-                        self.graph[indentLevel].append(statement)
-    def getLastCondition(self, indent_lane):
-        for i in reversed(range(len(indent_lane))):
-            if type(indent_lane[i]) is Condition:
-                return indent_lane[i]
-
+                            parent=self.indentList[indentLevel-1][-1]
+                            if type(parent) is modifier:
+                                parent.true=condition      
+                            else:
+                                self.indentList[indentLevel].append(ifCondition)
+                        self.conditions[indentLevel].append(ifCondition)
+                    elif firstWord == 'elif':
+                        previousCondition=self.condition[indentLevel][-1]
+                        elifCondition=modifier(line[4:],indentLevel)
+                        previousCondition.false=elifCondition
+                        self.indentList[indentLevel].append(elifCondition)
+                        self.conditions[indentLevel].append(elifCondition)
+                    elif firstWord == 'else:':
+                        previousCondition=self.conditions[indentLevel][-1]
+                        elseCondition=modifier("else",indentLevel)
+                        previousCondition.false=elseCondition
+                    else: 
+                        parent=self.indentList[indentLevel-1][-1]
+                        statement=node(line,indentLevel,false)
+                        if not self.indentList[indentLevel]:
+                            if(type(parent) is modifier):
+                                if parent.indentLevel<=indentLevel:
+                                    parent.false=statement
+                                    parent.true.next=statement
+                                else:
+                                    parent.true=statement
+                        
     def getIndentLevel(self,line):
         indent_level = 0
         for char in line:
@@ -133,5 +90,3 @@ class Parser:
         traverse(entry, '')
         for path in paths:
             print(path)
-
-
